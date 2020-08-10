@@ -12,6 +12,7 @@ GRPC_CLIENT_CONNECTIONS=${GRPC_CLIENT_CONNECTIONS:-"5"}
 GRPC_CLIENT_CONCURRENCY=${GRPC_CLIENT_CONCURRENCY:-"50"}
 GRPC_CLIENT_QPS=${GRPC_CLIENT_QPS:-"0"}
 GRPC_CLIENT_QPS=$(( GRPC_CLIENT_QPS / GRPC_CLIENT_CONCURRENCY ))
+GRPC_CLIENT_CPUS=4
 
 # Let containers know how many CPUs they will be running on
 export GRPC_SERVER_CPUS
@@ -29,6 +30,7 @@ for benchmark in ${BENCHMARKS_TO_RUN}; do
 	sleep 5
 	./collect_stats.sh "${NAME}" "${RESULTS_DIR}" &
 	docker run --name ghz --rm --network=host -v "${PWD}/proto:/proto:ro" \
+		--cpus 4 \
 		--entrypoint=ghz infoblox/ghz:0.0.1 \
 		--proto=/proto/helloworld/helloworld.proto \
 		--call=helloworld.Greeter.SayHello \
