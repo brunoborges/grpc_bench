@@ -5,7 +5,8 @@ COPY java_quarkus_maven_bench /app
 COPY proto/helloworld/helloworld.proto /app/src/main/proto/helloworld.proto
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
 RUN gu install native-image
-RUN /app/mvnw package -Pnative
+RUN chmod+x /app/mvnw \
+    && /app/mvnw package -Pnative
 
 EXPOSE 8080
 EXPOSE 9000
