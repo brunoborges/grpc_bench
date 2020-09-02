@@ -4,7 +4,8 @@ WORKDIR /app
 COPY java_quarkus_maven_bench /app
 COPY proto/helloworld/helloworld.proto /app/src/main/proto/helloworld.proto
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
-RUN /app/mvnw package
+RUN chmod u+x /app/mvnw \
+    && /app/mvnw package
 
 # Configure the JAVA_OPTIONS, you can add -XshowSettings:vm to also display the heap size.
 ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
