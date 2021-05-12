@@ -6,7 +6,8 @@ BENCHMARKS_TO_RUN="${@}"
 BENCHMARKS_TO_RUN="${BENCHMARKS_TO_RUN:-$(find . -maxdepth 1 -name '*_bench' -type d | sort)}"
 
 RESULTS_DIR="results/$(date '+%y%d%mT%H%M%S')"
-GRPC_BENCHMARK_DURATION=${GRPC_BENCHMARK_DURATION:-"30s"}
+GRPC_BENCHMARK_DURATION=${GRPC_BENCHMARK_DURATION:-"20s"}
+GRPC_BENCHMARK_WARMUP=${GRPC_BENCHMARK_WARMUP:-"5s"}
 GRPC_SERVER_CPUS=${GRPC_SERVER_CPUS:-"1"}
 GRPC_SERVER_RAM=${GRPC_SERVER_RAM:-"512m"}
 GRPC_CLIENT_CONNECTIONS=${GRPC_CLIENT_CONNECTIONS:-"50"}
@@ -41,25 +42,29 @@ for benchmark in ${BENCHMARKS_TO_RUN}; do
 	sleep 5
 
 	# Warm up the service
-	echo -n "Warming up the service for ${GRPC_BENCHMARK_WARMUP}... "
-	docker run --name ghz --rm --network=host -v "${PWD}/proto:/proto:ro" \
-	    -v "${PWD}/payload:/payload:ro" \
-		--cpus $GRPC_CLIENT_CPUS \
-		ghz_bench:latest \
-		--proto=/proto/helloworld/helloworld.proto \
-		--call=helloworld.Greeter.SayHello \
-        --insecure \
-        --concurrency="${GRPC_CLIENT_CONCURRENCY}" \
-        --connections="${GRPC_CLIENT_CONNECTIONS}" \
-        --qps="${GRPC_CLIENT_QPS}" \
-        --duration "${GRPC_BENCHMARK_WARMUP}" \
-        --data-file /payload/"${GRPC_REQUEST_PAYLOAD}" \
-		127.0.0.1:50051 > /dev/null
+    if [[ "${GRPC_BENCHMARK_WARMUP}" != "0s" ]]; then
+      	echo -n "Warming up the service for ${GRPC_BENCHMARK_WARMUP}... "
+    	docker run --name ghz --rm --network=host -v "${PWD}/proto:/proto:ro" \
+    	    -v "${PWD}/payload:/payload:ro" \
+    		--cpus $GRPC_CLIENT_CPUS \
+    		ghz_bench:latest \
+    		--proto=/proto/helloworld/helloworld.proto \
+    		--call=helloworld.Greeter.SayHello \
+            --insecure \
+            --concurrency="${GRPC_CLIENT_CONCURRENCY}" \
+            --connections="${GRPC_CLIENT_CONNECTIONS}" \
+            --qps="${GRPC_CLIENT_QPS}" \
+            --duration "${GRPC_BENCHMARK_WARMUP}" \
+            --data-file /payload/"${GRPC_REQUEST_PAYLOAD}" \
+    		127.0.0.1:50051 > /dev/null
 
-	echo "done."
+    	echo "done."
+    else
+        echo "gRPC Server Warmup skipped."
+    fi
 
 	# Actual benchmark
-	echo -n "Benchmarking now... "
+	echo "Benchmarking now... "
 
 	# Start collecting stats
 	./collect_stats.sh "${NAME}" "${RESULTS_DIR}" &
@@ -95,6 +100,7 @@ Benchmark info:
 $(git log -1 --pretty="%h %cD %cn %s")
 Benchmarks run: $BENCHMARKS_TO_RUN
 GRPC_BENCHMARK_DURATION=$GRPC_BENCHMARK_DURATION
+GRPC_BENCHMARK_WARMUP=$GRPC_BENCHMARK_WARMUP
 GRPC_SERVER_CPUS=$GRPC_SERVER_CPUS
 GRPC_SERVER_RAM=$GRPC_SERVER_RAM
 GRPC_CLIENT_CONNECTIONS=$GRPC_CLIENT_CONNECTIONS
